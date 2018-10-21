@@ -1,0 +1,16 @@
+{
+  "devDependencies": {
+    "elm-test": "0.19.0-beta10",
+    "node-elm-compiler": "^5.0.1",
+    "uglify-js": "^3.4.9",
+    "webpack": "^4.20.2",
+    "webpack-cli": "^3.1.2",
+    "webpack-dev-server": "^3.1.9",
+    "webpack-merge": "^4.1.4"
+  },
+  "scripts": {
+    "dev": "webpack --config webpack.dev.js",
+    "serve": "webpack-dev-server --open --config webpack.dev.js",
+    "prod": "webpack --config webpack.prod.js"
+  }
+}

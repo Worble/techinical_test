@@ -1,0 +1,12 @@
+[package]
+name = "server"
+version = "0.1.0"
+authors = ["worble"]
+edition = "2018"
+
+[dependencies]
+actix-web = { git = "https://github.com/actix/actix-web" }
+serde_derive = "1.0.80"
+serde = "1.0.80"
+http = "0.1.13"
+env_logger = "0.5.13"
