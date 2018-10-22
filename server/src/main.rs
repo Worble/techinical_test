@@ -19,52 +19,13 @@ use diesel::r2d2::ConnectionManager;
 use futures::Future;
 
 mod db;
+pub mod json;
 pub mod models;
 pub mod schema;
 use self::db::{DbExecutor, GetAllProducts};
 
 struct AppState {
     db: Addr<DbExecutor>,
-}
-
-#[derive(Serialize)]
-struct ProductJson {
-    id: i32,
-    ordinal: i32,
-    name: String,
-    price: i32,
-    offer: Option<OfferJson>,
-}
-
-#[derive(Serialize)]
-struct OfferJson {
-    id: i32,
-    text: String,
-    basket_amount: i32,
-    subtract_amount: i32,
-}
-
-fn build_offer_json(offer: models::Offer) -> OfferJson {
-    OfferJson {
-        id: offer.id,
-        text: offer.text,
-        basket_amount: offer.basket_amount,
-        subtract_amount: offer.subtract_amount,
-    }
-}
-
-fn build_product_json((product, offer): (models::Product, Option<models::Offer>)) -> ProductJson {
-    let offer = match offer {
-        Some(offer) => Some(build_offer_json(offer)),
-        None => None,
-    };
-    ProductJson {
-        id: product.id,
-        ordinal: product.ordinal,
-        name: product.name,
-        price: product.price,
-        offer: offer,
-    }
 }
 
 fn get_all_products_diesel(state: State<AppState>) -> FutureResponse<HttpResponse> {
@@ -75,9 +36,9 @@ fn get_all_products_diesel(state: State<AppState>) -> FutureResponse<HttpRespons
         .from_err()
         .and_then(|res| match res {
             Ok(products) => {
-                let mut products_json: Vec<ProductJson> = vec![];
+                let mut products_json: Vec<json::ProductJson> = vec![];
                 for product in products {
-                    products_json.push(build_product_json(product))
+                    products_json.push(json::build_product_json(product))
                 }
                 Ok(HttpResponse::Ok().json(products_json))
             }
@@ -92,7 +53,6 @@ fn index(_state: State<AppState>) -> &'static str {
 
 fn main() {
     let address = "127.0.0.1:8088";
-    println!("Hosting server on: {}", address);
 
     std::env::set_var("RUST_LOG", "actix_web=info");
     env_logger::init();
@@ -117,7 +77,6 @@ fn main() {
                     .finish(),
             )
             .resource("/", |r| r.with(index))
-            //.resource(r"/api/data", |r| r.method(Method::GET).f(get_all_products))
             .resource(r"/api/data", |r| {
                 r.method(Method::GET).with(get_all_products_diesel)
             })
@@ -125,6 +84,8 @@ fn main() {
     .bind(address)
     .unwrap()
     .start();
+
+    println!("Hosting server on: {}", address);
 
     let _ = sys.run();
 }
