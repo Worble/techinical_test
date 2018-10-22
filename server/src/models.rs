@@ -1,4 +1,4 @@
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Offer {
     pub id: i32,
     pub text: String,
@@ -6,11 +6,11 @@ pub struct Offer {
     pub subtract_amount: i32,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Product {
     pub id: i32,
     pub ordinal: i32,
     pub name: String,
     pub price: i32,
-    pub offer: Option<Offer>,
+    pub offer_id: Option<i32>,
 }
