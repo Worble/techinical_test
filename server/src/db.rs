@@ -1,7 +1,6 @@
 extern crate actix;
-use actix::prelude::{Actor, ActorFuture, ActorStream, Handler, Message, SyncContext};
+use actix::prelude::{Actor, Handler, Message, SyncContext};
 use actix_web::*;
-use diesel;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool};
 
@@ -26,13 +25,13 @@ impl Actor for DbExecutor {
 impl Handler<GetAllProducts> for DbExecutor {
     type Result = Result<Vec<(models::Product, Option<models::Offer>)>, Error>;
 
-    fn handle(&mut self, msg: GetAllProducts, _: &mut Self::Context) -> Self::Result {
+    fn handle(&mut self, _msg: GetAllProducts, _: &mut Self::Context) -> Self::Result {
         use self::schema::offers::dsl::*;
         use self::schema::products::dsl::*;
 
         let conn: &SqliteConnection = &self.0.get().unwrap();
 
-        let mut items = products
+        let items = products
             .left_join(offers)
             .load::<(models::Product, Option<models::Offer>)>(conn)
             .map_err(|_| error::ErrorInternalServerError("Error loading products"))?;

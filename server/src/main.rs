@@ -4,10 +4,7 @@ extern crate serde_derive;
 extern crate env_logger;
 use actix_web::middleware::cors;
 use actix_web::middleware::Logger;
-use actix_web::{
-    http, http::Method, middleware, server, App, AsyncResponder, FutureResponse, HttpRequest,
-    HttpResponse, Json, Path, Result, State,
-};
+use actix_web::{http::Method, server, App, AsyncResponder, FutureResponse, HttpResponse, State};
 extern crate serde;
 #[macro_use]
 extern crate diesel;
@@ -31,65 +28,43 @@ struct AppState {
 }
 
 #[derive(Serialize)]
-struct Product {
+struct ProductJson {
     id: i32,
     ordinal: i32,
     name: String,
     price: i32,
-    offer: Option<Offer>,
+    offer: Option<OfferJson>,
 }
 
 #[derive(Serialize)]
-struct Offer {
+struct OfferJson {
     id: i32,
     text: String,
     basket_amount: i32,
     subtract_amount: i32,
 }
 
-fn get_all_products(_req: &HttpRequest) -> Result<Json<Vec<Product>>> {
-    let products = vec![
-        Product {
-            id: 1,
-            ordinal: 0,
-            name: String::from("A"),
-            price: 50,
-            offer: Some(Offer {
-                id: 1,
-                text: String::from("3 for 130"),
-                basket_amount: 3,
-                subtract_amount: 20,
-            }),
-        },
-        Product {
-            id: 2,
-            ordinal: 1,
-            name: String::from("B"),
-            price: 30,
-            offer: Some(Offer {
-                id: 2,
-                text: String::from("2 for 45"),
-                basket_amount: 2,
-                subtract_amount: 15,
-            }),
-        },
-        Product {
-            id: 3,
-            ordinal: 2,
-            name: String::from("C"),
-            price: 20,
-            offer: None,
-        },
-        Product {
-            id: 4,
-            ordinal: 3,
-            name: String::from("D"),
-            price: 15,
-            offer: None,
-        },
-    ];
+fn build_offer_json(offer: models::Offer) -> OfferJson {
+    OfferJson {
+        id: offer.id,
+        text: offer.text,
+        basket_amount: offer.basket_amount,
+        subtract_amount: offer.subtract_amount,
+    }
+}
 
-    Ok(Json(products))
+fn build_product_json((product, offer): (models::Product, Option<models::Offer>)) -> ProductJson {
+    let offer = match offer {
+        Some(offer) => Some(build_offer_json(offer)),
+        None => None,
+    };
+    ProductJson {
+        id: product.id,
+        ordinal: product.ordinal,
+        name: product.name,
+        price: product.price,
+        offer: offer,
+    }
 }
 
 fn get_all_products_diesel(state: State<AppState>) -> FutureResponse<HttpResponse> {
@@ -99,13 +74,19 @@ fn get_all_products_diesel(state: State<AppState>) -> FutureResponse<HttpRespons
         .send(GetAllProducts {})
         .from_err()
         .and_then(|res| match res {
-            Ok(products) => Ok(HttpResponse::Ok().json(products)),
+            Ok(products) => {
+                let mut products_json: Vec<ProductJson> = vec![];
+                for product in products {
+                    products_json.push(build_product_json(product))
+                }
+                Ok(HttpResponse::Ok().json(products_json))
+            }
             Err(_) => Ok(HttpResponse::InternalServerError().into()),
         })
         .responder()
 }
 
-fn index(_req: &HttpRequest) -> &'static str {
+fn index(_state: State<AppState>) -> &'static str {
     "Hello world!"
 }
 
@@ -135,9 +116,9 @@ fn main() {
                     .allowed_origin("http://localhost:8080")
                     .finish(),
             )
-            //.resource("/", |r| r.f(index))
+            .resource("/", |r| r.with(index))
             //.resource(r"/api/data", |r| r.method(Method::GET).f(get_all_products))
-            .resource(r"/api/data2", |r| {
+            .resource(r"/api/data", |r| {
                 r.method(Method::GET).with(get_all_products_diesel)
             })
     })
