@@ -36,7 +36,7 @@ fn get_all_products_diesel(state: State<AppState>) -> FutureResponse<HttpRespons
         .from_err()
         .and_then(|res| match res {
             Ok(products) => {
-                let mut products_json: Vec<json::ProductJson> = vec![];
+                let mut products_json: Vec<json::ProductJson> = Vec::with_capacity(products.len());
                 for product in products {
                     products_json.push(json::build_product_json(product))
                 }
